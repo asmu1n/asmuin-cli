@@ -70,5 +70,18 @@
                 }
             }
         ]
+    },
+    "plugin": {
+        "key": "plugin",
+        "description": "请选择相应的浏览器插件：",
+        "name": "浏览器插件",
+        "value": "plugin",
+        "choices": [
+            {
+                "name": "Chrome",
+                "value": "chrome_plugin",
+                "color": "blue"
+            }
+        ]
     }
 }
