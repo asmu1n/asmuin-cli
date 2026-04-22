@@ -1,64 +1,130 @@
-# AsMuin Project Template
+# asmuin-cli
 
-## Why this project creaded?
-When creating a project, since each project basically uses TypeScript, prettier, and eslint, along with some compilation and rule format configurations, it takes a considerable amount of time to complete the initialization of each project. To save time and maintain a consistent configuration style, a custom project scaffolding is adopted, using templates to complete the basic configuration and directory structure of the project.
+[![npm version](https://img.shields.io/npm/v/asmuin-cli)](https://www.npmjs.com/package/asmuin-cli)
+[![Node.js](https://img.shields.io/node/v/asmuin-cli)](https://nodejs.org)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## something you should know
+A lightweight CLI scaffolding tool that bootstraps projects from GitHub branch-based templates via interactive prompts — no Git installation required.
 
-This tool is built on ESModule, so it has certain requirements for your Node environment. If you encounter any errors due to version issues, you can switch to the latest Node LTS version.
+## Table of Contents
 
-### npm package dependencies
-`axios` + `chalk` + `child_process` + `figlet` + `inquirer` + `unzipper`
+- [asmuin-cli](#asmuin-cli)
+  - [Table of Contents](#table-of-contents)
+  - [Why](#why)
+  - [Requirements](#requirements)
+  - [Installation](#installation)
+  - [Usage](#usage)
+    - [Available templates](#available-templates)
+  - [How It Works](#how-it-works)
+  - [Configuration](#configuration)
+    - [`template.json` schema](#templatejson-schema)
+    - [Branch mapping](#branch-mapping)
+  - [Development](#development)
+  - [Contributing](#contributing)
+  - [License](#license)
 
-### how it works
-The specific idea of creating project templates implemented by this tool is that based on the input content, different templates are selected through different branches in a GIT repository you specify, and then the compressed file is downloaded and decompressed into a folder with the same name as the project name you initially entered.
+---
 
-### how to use
+## Why
+
+Every new project requires the same baseline setup: TypeScript, ESLint, Prettier, compiler configs, directory structure. Rather than repeating that work, this tool downloads the right template branch and drops it into a new folder — so you start coding instead of configuring.
+
+## Requirements
+
+- **Node.js** `>= 18`
+- An internet connection (downloads template archives from GitHub)
+
+> No Git installation needed. The tool fetches templates directly over HTTPS as `.tar.gz` archives using Node.js built-in modules.
+
+## Installation
+
 ```bash
-npm i asmuin-cli -g
-asmuin-cli
+# Global install (recommended for repeated use)
+npm install -g asmuin-cli
 
-or
-
+# Or run without installing
 npx asmuin-cli
-
 ```
 
-### how to configure
-First, you need to specify a GIT repository address. In the project, I have set up my template repository as the default. Meanwhile, different branches correspond to various templates. You need to maintain the correspondence between the two by yourself. After all, this tool is actually only responsible for obtaining the compressed file you specify and unzipping it in the directory you specify.
+## Usage
 
-just like this 
-``` js
-    // GitHub 仓库地址和分支映射
-    const repoUrl = 'https://github.com/AsMuin/project-template';
-    const branchMap = {
-        react: 'react',
-        'express-mongodb': 'express-mongodb'
-    };
-
+```bash
+asmuin-cli
 ```
 
-The most important part is how to get the project template you want according to the command line instructions, the project has a template.json file, and the JSON object is used to configure the effect you want to achieve.
+The CLI will prompt you to:
 
-demo config
+1. Enter a **project name** (becomes the output folder)
+2. Select a **project type** (frontend / backend / full-stack / plugin)
+3. Select a **framework** and optionally a **database**
+
+The chosen template is downloaded and extracted into `./<project-name>`.
+
+```
+    _        __  __       _         _____                    _       _
+   / \   ___|  \/  |_   _(_)_ __   |_   _|__ _ __ ___  _ __ | | __ _| |_ ___
+  / _ \ / __| |\/| | | | | | '_ \    | |/ _ \ '_ ` _ \| '_ \| |/ _` | __/ _ \
+ / ___ \\__ \ |  | | |_| | | | | |   | |  __/ | | | | | |_) | | (_| | ||  __/
+/_/   \_\___/_|  |_|\__,_|_|_| |_|   |_|\___|_| |_| |_| .__/|_|\__,_|\__\___|
+                                                        |_|
+
+欢迎！🎉🎉
+请选择一个模版开始你的项目：
+
+? 请输入项目名称： my-app
+? 请选择项目类型： 后端项目
+? 请选择使用的开发框架： Express
+? 请选择使用的数据库： PostgreSQL
+```
+
+### Available templates
+
+| Type | Framework | Database | Branch |
+|---|---|---|---|
+| Frontend | React + Axios + TailwindCSS | — | `react` |
+| Backend | Express | MongoDB | `express-mongodb` |
+| Backend | Express | PostgreSQL | `express-postgresql` |
+| Full-Stack | Next.js | PostgreSQL | `next-postgresql` |
+| Full-Stack | Monorepo (React + Express) | — | `monorepo` |
+| Plugin | Chrome Extension | — | `chrome_plugin` |
+
+## How It Works
+
+1. Reads `template.json` to build the interactive prompt tree
+2. Resolves the selected options to a **branch name**
+3. Downloads `https://github.com/<owner>/<repo>/archive/refs/heads/<branch>.tar.gz` via Node.js built-in `https`
+4. Decompresses with Node.js built-in `zlib` and parses the TAR format natively
+5. Writes the template files into `./<project-name>`, then cleans up
+
+No temporary ZIP files, no Git dependency, no shelling out.
+
+## Configuration
+
+### `template.json` schema
+
+The prompt tree is driven entirely by `template.json`. Each node supports the following fields:
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `name` | `string` | ✅ | Display label shown in the prompt |
+| `value` | `string` | ✅ | Value passed to the branch resolver |
+| `description` | `string` | — | Prompt message for this selection level |
+| `color` | `string` | — | Terminal color for the label (`green`, `blue`, `cyan`, `magenta`, `red`, `yellow`…). Falls back to `green`. |
+| `choices` | `array` | — | Sub-options for this node. Omit to mark as a leaf (final selection). |
+| `next` | `object` | — | Nested selection level triggered after this choice is made. Key becomes part of the resolved branch name. |
+
+**Multi-level value resolution:**  
+For nested selections, the final branch value is assembled as `parentValue-childValue` (e.g. `express` + `mongodb` → `express-mongodb`). The top-level category key (`frontend`, `backend`, etc.) is not included.
+
+**Example:**
+
 ```json
 {
-    "frontend": {
-        "key": "frontend",
-        "description": "请选择使用的开发框架：",
-        "name": "前端项目",
-        "choices": [
-            {
-                "name": "React + Axios + TailwindCSS",
-                "value": "react",
-                "color": "blue"
-            }
-        ]
-    },
     "backend": {
         "key": "backend",
         "description": "请选择使用的开发框架：",
         "name": "后端项目",
+        "value": "backend",
         "choices": [
             {
                 "name": "Express",
@@ -70,11 +136,8 @@ demo config
                         "key": "database",
                         "name": "数据库",
                         "choices": [
-                            {
-                                "name": "MongoDB",
-                                "value": "mongodb",
-                                "color": "cyan"
-                            }
+                            { "name": "MongoDB",    "value": "mongodb",    "color": "cyan"  },
+                            { "name": "PostgreSQL", "value": "postgresql", "color": "green" }
                         ]
                     }
                 }
@@ -84,14 +147,56 @@ demo config
 }
 ```
 
-- `description` field indicates the indication that the command line displays when you are faced with an input command
+### Branch mapping
 
-- `name` is the text of the content tag
+`main.ts` contains a `BRANCH_MAP` that maps resolved template values to actual repository branch names. If a value has no explicit mapping, it is used as-is.
 
-- `value` is the value that the option actually represents, and in the case of multi-level selection, parentValue-childValue will be returned to indicate that this is the result of a multi-level option, which requires you to configure the GIT branch or set up the branch mapping table to make the corresponding configuration.
-(❗ the first-level options will not be recorded in it, such as frontend, backend.) Of course, you can also modify the source code to keep the side effects of each level completely uniform)
+```ts
+const BRANCH_MAP: Record<string, string> = {
+    react: 'react',
+    'express-mongodb': 'express-mongodb',
+    'express-postgresql': 'express-postgresql',
+    'next-postgresql': 'next-postgresql',
+};
+```
 
-- `color` is the color of the text displayed in the terminal, which can be set to "rgb(0,0,0)" and other color formats, please refer to chalk for more detailed configuration information, if there is no configuration or the configuration cannot be displayed normally, green text will be displayed.
+Update `REPO_URL` and `BRANCH_MAP` in `src/main.ts` to point at your own template repository.
 
-- `next` represents the configuration item of the next node after the node is configured, and the structure type is the same 
-(🌝 you should pay attention to the order of the nested hierarchy, because it affects the branch name you finally specify, just like XXX-XXX-XXX....)
+## Development
+
+```bash
+# Install dependencies
+bun install
+
+# Run from source (no build step needed)
+bun run dev
+
+# Type check
+bun run typecheck
+
+# Build for distribution
+bun run build
+```
+
+**Source layout:**
+
+```
+src/
+├── main.ts      # Entry point — UI, prompt orchestration
+├── choose.ts    # Interactive prompts (inquirer)
+├── tarball.ts   # HTTPS download + gzip decompress + TAR extract
+└── colors.ts    # Inline ANSI color helpers
+```
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feat/your-feature`
+3. Commit your changes: `git commit -m "feat: describe your change"`
+4. Push and open a Pull Request
+
+Please open an [issue](https://github.com/AsMuin/asmuin-cli/issues) first for significant changes.
+
+## License
+
+[MIT](./LICENSE) © [AsMuin](https://github.com/AsMuin)
