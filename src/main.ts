@@ -19,6 +19,7 @@ const BRANCH_MAP: Record<string, string> = {
     "express-mongodb": "express-mongodb",
     "express-postgresql": "express-postgresql",
     "next-postgresql": "next-postgresql",
+    "gin-postgresql": "gin",
 };
 
 async function main() {
@@ -41,12 +42,15 @@ async function main() {
         await downloadAndExtractTarball(tarUrl, dest);
         console.log(colors.greenBright("\n🎉 项目已成功创建！"));
         console.log(colors.yellow(`\n打开编辑器进入项目目录: code ${name}`));
+        process.exit(0);
     } catch (error) {
         const err = error as Error;
         console.error(colors.red("❌ 发生错误："), err.message);
+        process.exit(1);
     }
 }
 
 main().catch((error) => {
     console.error(colors.red("❌ 未捕获的错误："), error);
+    process.exit(1);
 });

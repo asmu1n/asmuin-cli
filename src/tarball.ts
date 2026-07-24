@@ -8,11 +8,11 @@ function downloadAndDecompress(url: string) {
     return new Promise<Buffer>((resolve, reject) => {
         function request(currentUrl: string, redirects = 0): void {
             if (redirects > 10) {
-                reject(new Error("Too many redirects"));
+                reject(new Error("重定向次数过多"));
                 return;
             }
             const mod = currentUrl.startsWith("https:") ? https : http;
-            mod.get(currentUrl, (res) => {
+            const req = mod.get(currentUrl, { timeout: 60000 }, (res) => {
                 if (
                     res.statusCode &&
                     res.statusCode >= 300 &&
@@ -30,7 +30,12 @@ function downloadAndDecompress(url: string) {
                     gunzip.on("end", () => resolve(Buffer.concat(chunks)));
                     gunzip.on("error", reject);
                 }
-            }).on("error", reject);
+            });
+            req.on("error", reject);
+            req.on("timeout", () => {
+                req.destroy();
+                reject(new Error("下载超时，请检查网络连接后重试"));
+            });
         }
         request(url);
     });

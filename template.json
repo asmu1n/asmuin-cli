@@ -41,6 +41,25 @@
                         ]
                     }
                 }
+            },
+            {
+                "name": "Gin",
+                "value": "gin",
+                "color": "blue",
+                "next": {
+                    "database": {
+                        "description": "请选择使用的数据库：",
+                        "key": "database",
+                        "name": "数据库",
+                        "choices": [
+                            {
+                                "name": "PostgreSQL",
+                                "value": "postgresql",
+                                "color": "green"
+                            }
+                        ]
+                    }
+                }
             }
         ]
     },
