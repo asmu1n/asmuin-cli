@@ -34,7 +34,7 @@ Every new project requires the same baseline setup: TypeScript, ESLint, Prettier
 - **Node.js** `>= 18`
 - An internet connection (downloads template archives from GitHub)
 
-> No Git installation needed. The tool fetches templates directly over HTTPS as `.tar.gz` archives using Node.js built-in modules.
+> No Git installation needed. The published package has **zero runtime dependencies** — prompts, download, and extraction are all bundled into a single `dist/main.js`. Templates are fetched over HTTPS as `.tar.gz` archives.
 
 ## Installation
 
@@ -165,7 +165,7 @@ Update `REPO_URL` and `BRANCH_MAP` in `src/main.ts` to point at your own templat
 ## Development
 
 ```bash
-# Install dependencies
+# Install dev dependencies (@clack/prompts is bundled at build time)
 bun install
 
 # Run from source (no build step needed)
@@ -174,7 +174,7 @@ bun run dev
 # Type check
 bun run typecheck
 
-# Build for distribution
+# Build for distribution → single-file dist/main.js (zero runtime deps)
 bun run build
 ```
 
@@ -183,7 +183,7 @@ bun run build
 ```
 src/
 ├── main.ts      # Entry point — UI, prompt orchestration
-├── choose.ts    # Interactive prompts (inquirer)
+├── choose.ts    # Interactive prompts (@clack/prompts, bundled)
 ├── tarball.ts   # HTTPS download + gzip decompress + TAR extract
 └── colors.ts    # Inline ANSI color helpers
 ```

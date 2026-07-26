@@ -1,4 +1,4 @@
-import inquirer from "inquirer";
+import * as p from "@clack/prompts";
 import templateJSON from "../template.json";
 import colors, { type ColorKey } from "./colors";
 
@@ -19,69 +19,78 @@ interface TemplateNode {
 
 type TemplateData = Record<string, TemplateNode>;
 
+function handleCancel(value: unknown): asserts value is Exclude<typeof value, symbol> {
+    if (p.isCancel(value)) {
+        p.cancel("已取消创建项目。");
+        process.exit(0);
+    }
+}
+
+function colorize(label: string, color?: string) {
+    if (color && colors[color as ColorKey]) {
+        return colors[color as ColorKey](label);
+    }
+    return colors.green(label);
+}
+
 async function chooseTemplate() {
     const data = templateJSON as TemplateData;
 
-    const { name } = await inquirer.prompt<{ name: string }>([
-        {
-            type: "input",
-            name: "name",
-            message: colors.bold("请输入项目名称："),
-            validate(input: string) {
-                if (!input || input.trim() === "") {
-                    return "项目名称不能为空！";
-                }
-                return true;
-            },
+    const name = await p.text({
+        message: "请输入项目名称：",
+        placeholder: "my-app",
+        validate(input) {
+            if (!input || input.trim() === "") {
+                return "项目名称不能为空！";
+            }
         },
-    ]);
+    });
+    handleCancel(name);
 
-    const { projectType } = await inquirer.prompt<{ projectType: string }>([
-        {
-            type: "list",
-            name: "projectType",
-            message: colors.bold("请选择项目类型："),
-            choices: Object.keys(data).map((key) => ({
-                name: colors.green(data[key].name),
-                value: data[key].value,
-            })),
-        },
-    ]);
+    const projectType = await p.select({
+        message: "请选择项目类型：",
+        options: Object.keys(data).map((key) => ({
+            label: colorize(data[key].name),
+            value: data[key].value ?? key,
+        })),
+    });
+    handleCancel(projectType);
 
-    const template = await traverseChoices(data[projectType]);
-    return { name, template };
+    const node = data[projectType as string];
+    if (!node) {
+        throw new Error(`未知的项目类型：${String(projectType)}`);
+    }
+
+    const template = await traverseChoices(node);
+    return { name: String(name).trim(), template };
 }
 
-async function traverseChoices(node: TemplateNode, parentName = "") {
+async function traverseChoices(node: TemplateNode, parentName = ""): Promise<string> {
     if (!node.choices) {
         return node.value ?? "";
     }
 
-    const { choice } = await inquirer.prompt<{ choice: TemplateChoice }>([
-        {
-            type: "list",
-            name: "choice",
-            message: colors.bold(node.description || "请选择："),
-            choices: node.choices.map((item) => ({
-                name:
-                    item.color && colors[item.color as ColorKey]
-                        ? colors[item.color as ColorKey](item.name)
-                        : colors.green(item.name),
-                value: item,
-            })),
-        },
-    ]);
+    const choice = await p.select({
+        message: node.description || "请选择：",
+        options: node.choices.map((item, index) => ({
+            label: colorize(item.name, item.color),
+            value: index,
+        })),
+    });
+    handleCancel(choice);
 
-    if (choice.next) {
-        const nextKey = Object.keys(choice.next)[0];
-        const nextName = parentName ? `${parentName}-${nextKey}` : choice.value;
-        return traverseChoices(choice.next[nextKey], nextName);
+    const selected = node.choices[choice as number];
+    if (!selected) {
+        throw new Error("无效的选项");
     }
 
-    const returnValue = parentName
-        ? `${parentName}-${choice.value}`
-        : choice.value;
-    return returnValue;
+    if (selected.next) {
+        const nextKey = Object.keys(selected.next)[0];
+        const nextName = parentName ? `${parentName}-${nextKey}` : selected.value;
+        return traverseChoices(selected.next[nextKey], nextName);
+    }
+
+    return parentName ? `${parentName}-${selected.value}` : selected.value;
 }
 
 export default chooseTemplate;
